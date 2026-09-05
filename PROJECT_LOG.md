@@ -18,9 +18,14 @@
 
 ## Current state
 
-Awaiting review of the written specification before creating the detailed
-implementation plan.
+- The approved implementation plan is committed.
+- The CSV normalizer and async portal client are implemented on the
+  `initial-implementation` branch.
+- Nineteen focused tests pass along with Ruff and strict mypy checks.
+- GitHub publication is pending because the local `gh` authentication for the
+  intended owner is expired.
 
 ## Next step
 
-Create the implementation plan after specification approval.
+Implement the Home Assistant long-term statistics adapter using test-driven
+development.

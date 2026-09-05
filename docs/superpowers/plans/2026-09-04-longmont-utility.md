@@ -94,27 +94,27 @@ git commit -m "feat: parse Longmont interval exports"
 - Produces: `MeterInfo(account_ref: str, meter_ref: str, label: str)`, `LongmontPortalClient(session: ClientSession, username: str, password: str)`, `async authenticate() -> None`, `async discover_meters() -> tuple[MeterInfo, ...]`, and `async download_usage(meter: MeterInfo, start: date, end: date) -> tuple[ParsedDay, ...]`.
 - Produces exceptions: `InvalidAuth`, `PortalProtocolError`, `PortalUnavailable` with redacted messages.
 
-- [ ] **Step 1: Write failing mocked HTTP tests**
+- [x] **Step 1: Write failing mocked HTTP tests**
 
 Assert login form discovery and submission, failed-login classification, account/meter discovery, daily range selection, export-key GET, empty POST to `/app/ExcelExport?key=...`, session serialization, 90-day limit enforcement, timeouts, `Retry-After`, and redacted exceptions. Synthetic fixtures use `acct-test-1`, `meter-test-1`, and `person@example.invalid` only.
 
-- [ ] **Step 2: Run client tests and confirm failure**
+- [x] **Step 2: Run client tests and confirm failure**
 
 Run: `python -m pytest tests/test_client.py -q`
 
 Expected: FAIL because `LongmontPortalClient` is undefined.
 
-- [ ] **Step 3: Implement the client**
+- [x] **Step 3: Implement the client**
 
 Use injected `aiohttp.ClientSession`, `asyncio.Lock`, explicit request timeouts, bounded retry for 429/5xx, and HTML form parsing limited to required hidden fields. Keep cookies in the injected session, export keys in local variables, and never include response bodies or identifiers in exception strings. Reject cross-origin form actions and unexpected content types.
 
-- [ ] **Step 4: Run focused and full tests**
+- [x] **Step 4: Run focused and full tests**
 
 Run: `python -m pytest tests/test_client.py tests/test_csv_parser.py -q && ruff check custom_components tests && mypy custom_components/longmont_utility`
 
 Expected: all commands exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add custom_components/longmont_utility/client.py tests/test_client.py tests/fixtures
