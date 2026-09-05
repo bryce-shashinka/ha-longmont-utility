@@ -48,17 +48,17 @@
 **Interfaces:**
 - Produces: `IntervalReading(start: datetime, energy_kwh: Decimal)`, `ParsedDay(reading_date: date, intervals: tuple[IntervalReading, ...], total_kwh: Decimal)`, `parse_smart_meter_csv(payload: str, timezone: ZoneInfo) -> tuple[ParsedDay, ...]`, and `CsvValidationError`.
 
-- [ ] **Step 1: Write failing parser tests**
+- [x] **Step 1: Write failing parser tests**
 
 Create synthetic CSV data whose header has 24 misleading labels while each row has 96 quarter-hour values and a total. Assert 96 ordered `America/Denver` timestamps, exact Decimal values, total validation, CRLF support, trailing-empty-field tolerance, and rejection of negative, non-finite, wrong-count, duplicate-date, and mismatched-total rows. Include spring-forward and fall-back dates and assert `CsvValidationError` instead of timestamp invention when 96 values cannot represent the local day unambiguously.
 
-- [ ] **Step 2: Run the focused tests and confirm failure**
+- [x] **Step 2: Run the focused tests and confirm failure**
 
 Run: `python -m pytest tests/test_csv_parser.py -q`
 
 Expected: collection fails because `custom_components.longmont_utility.csv_parser` does not exist.
 
-- [ ] **Step 3: Implement the typed parser and minimal packaging**
+- [x] **Step 3: Implement the typed parser and minimal packaging**
 
 Use `csv.reader`, `Decimal`, and `ZoneInfo`. Ignore header cardinality, require 96 interval fields and one populated total, reject non-finite/negative values, compare `sum(intervals)` to total with `Decimal("0.001")` tolerance, reject duplicate dates, and map ordinary dates from local midnight in 15-minute increments only when timezone round-trips are unambiguous. Define constants:
 
@@ -69,13 +69,13 @@ INTERVALS_PER_ORDINARY_DAY = 96
 TOTAL_TOLERANCE_KWH = Decimal("0.001")
 ```
 
-- [ ] **Step 4: Run parser tests and static checks**
+- [x] **Step 4: Run parser tests and static checks**
 
 Run: `python -m pytest tests/test_csv_parser.py -q && ruff check custom_components tests && mypy custom_components/longmont_utility`
 
 Expected: all commands exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .gitignore pyproject.toml requirements_test.txt hacs.json custom_components tests
