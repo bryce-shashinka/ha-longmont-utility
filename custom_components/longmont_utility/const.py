@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 DOMAIN = "longmont_utility"
+INTEGRATION_VERSION = "0.1.0"
 PORTAL_BASE_URL = "https://myutilityaccount.longmontcolorado.gov"
 PORTAL_TIME_ZONE = "America/Denver"
 INTERVALS_PER_ORDINARY_DAY = 96

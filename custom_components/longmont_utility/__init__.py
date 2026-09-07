@@ -4,9 +4,10 @@ from aiohttp import CookieJar
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.storage import Store
 
 from .client import LongmontPortalClient
-from .const import PORTAL_BASE_URL
+from .const import DOMAIN, PORTAL_BASE_URL, SOURCE_STORE_VERSION
 from .coordinator import LongmontConfigEntry, LongmontDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
@@ -37,3 +38,17 @@ async def async_unload_entry(
     """Unload a Longmont Utility config entry."""
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(
+    hass: HomeAssistant, entry: LongmontConfigEntry
+) -> None:
+    """Remove the retained source archive when its config entry is deleted."""
+
+    store = Store[dict[str, object]](
+        hass,
+        SOURCE_STORE_VERSION,
+        f"{DOMAIN}.{entry.entry_id}.source",
+        private=True,
+    )
+    await store.async_remove()

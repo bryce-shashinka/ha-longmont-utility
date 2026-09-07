@@ -8,6 +8,7 @@ from typing import Any, Protocol
 from homeassistant.core import HomeAssistant
 
 from .coordinator import CoordinatorData, LongmontConfigEntry
+from .const import INTEGRATION_VERSION
 
 
 class _Coordinator(Protocol):
@@ -24,6 +25,7 @@ def build_diagnostics(coordinator: _Coordinator) -> dict[str, Any]:
         else None
     )
     return {
+        "integration_version": INTEGRATION_VERSION,
         "status": "ok" if data.last_error_category is None else "error",
         "last_success": data.last_success.isoformat(),
         "latest_interval": (

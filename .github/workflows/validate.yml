@@ -1,0 +1,37 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: pip install -r requirements_test.txt
+      - run: ruff check custom_components tests
+      - run: mypy
+      - run: python -m pytest tests -q
+
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - run: rm -rf tests
+      - uses: home-assistant/actions/hassfest@342664e951e2fd5f00bc990fc968342388252475
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hacs/action@885037da508419fd08c13515967aec868dfdee2d
+        with:
+          category: integration

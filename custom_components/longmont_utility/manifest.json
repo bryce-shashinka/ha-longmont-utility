@@ -1,7 +1,7 @@
 {
   "domain": "longmont_utility",
   "name": "Longmont Utility",
-  "codeowners": [],
+  "codeowners": ["@bryce-shashinka"],
   "config_flow": true,
   "documentation": "https://github.com/bryce-shashinka/ha-longmont-utility",
   "iot_class": "cloud_polling",
@@ -9,4 +9,3 @@
   "requirements": [],
   "version": "0.1.0"
 }
-

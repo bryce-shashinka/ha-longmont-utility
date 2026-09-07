@@ -1,0 +1,26 @@
+name: Bug report
+description: Report unexpected integration behavior
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: checkboxes
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials, addresses, account and meter IDs, cookies, and raw portal files.
+          required: true
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Include the expected result and the actual result.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Home Assistant version
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Redacted diagnostics and logs
+      description: Use Home Assistant's diagnostics download and inspect it before posting.

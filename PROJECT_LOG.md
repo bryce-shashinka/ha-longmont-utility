@@ -21,7 +21,7 @@
 - The approved implementation plan is committed.
 - The CSV normalizer and async portal client are implemented on the
   `initial-implementation` branch.
-- Twenty-nine focused tests pass along with Ruff and strict mypy checks.
+- Thirty-four focused tests pass along with Ruff and strict mypy checks.
 - Confirmed Home Assistant external long-term statistics are hourly. The design
   now preserves all validated 15-minute readings in an integration-owned source
   archive and publishes four-reading hourly sums to the Energy dashboard.
@@ -30,10 +30,18 @@
   replace the matching hourly rows while the exact source values remain intact.
 - Raised the minimum runtime to Home Assistant 2026.9.1 and Python 3.14.2 to
   match the API used and verified the integration against that release.
+- Implemented the UI config flow, stable hashed duplicate detection, opaque
+  statistic identifiers, daily coordinator, config-entry setup/unload/removal,
+  and credential reauthentication.
+- Added three health sensors and a deliberately minimal diagnostics payload.
+- Added public installation, operation, privacy, and removal documentation; an
+  MIT license; issue templates; and pinned CI validation workflows.
+- Scanned the working tree and complete Git history for every known private
+  identifier from portal exploration. No matches were found.
 - GitHub publication is pending because the local `gh` authentication for the
   intended owner is expired.
 
 ## Next step
 
-Implement config flow, coordinator refresh, and reauthentication using
-test-driven development.
+Run the mandatory full functionality and security audit, resolve every finding,
+then publish the GitHub repository once command-line authentication is restored.
