@@ -15,9 +15,13 @@ The integration is divided into four isolated units:
    discovery, date-range selection, export-key retrieval, and CSV download.
 2. **CSV normalizer** — validates the malformed export and emits timezone-aware
    quarter-hour interval records.
-3. **Statistics importer** — converts interval energy into Home Assistant
-   cumulative long-term statistics and performs idempotent recent corrections.
-4. **Coordinator and config flow** — manages credentials, daily scheduling,
+3. **Source archive** — upserts every normalized 15-minute reading into an
+   integration-owned Home Assistant `.storage` record using UTC timestamps and
+   exact decimal strings.
+4. **Statistics importer** — aggregates four source readings into hourly Home
+   Assistant cumulative long-term statistics and performs idempotent recent
+   corrections.
+5. **Coordinator and config flow** — manages credentials, daily scheduling,
    retries, reauthentication, diagnostics, and setup UI.
 
 Only typed domain objects cross these boundaries. Portal HTML and CSV details
@@ -29,7 +33,8 @@ During setup, the config flow authenticates, discovers authorized electric
 meters, and stores the selected meter's opaque identifier with the credentials.
 The first coordinator refresh requests up to 90 days. Later refreshes request
 the most recent seven complete dates. The parser validates every row and emits
-interval records; the importer updates only the integration-owned statistic.
+interval records; the archive preserves those records at full fidelity; the
+importer updates only the integration-owned hourly statistic.
 
 The portal's export is a two-stage authenticated operation: request a
 short-lived encrypted key, then POST to `ExcelExport` with that key. The key is
@@ -41,7 +46,8 @@ session state, one session cannot run concurrent exports.
 Portal dates use Longmont local time (`America/Denver`). An ordinary row has 96
 quarter-hour intervals. DST transition handling is explicit and tested. The
 implementation will reject a date whose interval count cannot be mapped
-unambiguously rather than invent timestamps.
+unambiguously rather than invent timestamps. Full source intervals are stored
+with UTC timestamps; Home Assistant statistics receive 24 hourly sums.
 
 ## Failure behavior
 
@@ -68,4 +74,3 @@ Hassfest, and HACS validation.
 
 The canonical detailed requirements and acceptance criteria live in
 `SPEC.md`.
-

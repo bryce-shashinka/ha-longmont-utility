@@ -18,6 +18,7 @@ Home Assistant long-term statistics.
 - Authenticate with a dedicated Longmont utility guest account.
 - Retrieve the latest available quarter-hour consumption automatically.
 - Correctly parse the portal's malformed CSV.
+- Preserve every validated 15-minute source reading locally at full fidelity.
 - Backfill and revise recent statistics without double-counting.
 - Expose useful health diagnostics without leaking private account data.
 - Be installable as a custom repository through HACS.
@@ -73,6 +74,19 @@ raw response bodies.
   be handled explicitly; ambiguous or nonexistent local timestamps must not be
   silently shifted.
 
+## Source archive
+
+Every validated 15-minute reading is retained in Home Assistant's `.storage`
+system under an integration-owned, config-entry-specific key. The archive uses
+UTC ISO timestamps and decimal kWh strings so values can be reproduced exactly
+without binary floating-point loss. New downloads upsert timestamps, allowing
+the seven-day refresh window to capture utility revisions without duplicates.
+
+The archive is retained for the lifetime of the config entry. Removing the
+config entry removes its archive. The integration does not retain raw CSV,
+portal HTML, HTTP headers, cookies, export keys, account numbers, or meter IDs.
+Archive data is not exposed through diagnostics.
+
 ## Home Assistant data model
 
 The primary output is an external long-term statistic suitable for selection
@@ -83,9 +97,11 @@ as grid consumption in the Energy dashboard:
 - device class: energy
 - state class semantics: total increasing
 
-Each 15-minute interval contributes to a cumulative sum. Re-importing an
-existing time range replaces/corrects the integration-owned statistics rather
-than appending duplicates.
+Home Assistant long-term external statistics are hourly. Four consecutive
+15-minute source readings are summed into one hourly sample, and each hourly
+sample contributes to a cumulative sum. Re-importing an existing time range
+replaces/corrects the integration-owned statistics rather than appending
+duplicates. The full 15-minute readings remain available in the source archive.
 
 Diagnostic entities:
 
@@ -164,11 +180,13 @@ hand-authored and minimized. Logs and diagnostics are tested for redaction.
 4. A synthetic malformed-header CSV is parsed into exactly 96 correctly timed
    intervals per ordinary date.
 5. Interval sums are validated against daily totals.
-6. Initial import backfills up to 90 days and subsequent updates revisit seven
+6. Every validated 15-minute reading is upserted into the local source archive
+   with exact decimal fidelity and remains available for reprocessing.
+7. Initial import backfills up to 90 days and subsequent updates revisit seven
    days without duplicating consumption.
-7. Imported statistics are selectable as grid consumption in HA's Energy
+8. Four quarter-hour readings are aggregated into each hourly statistic, and
+   imported statistics are selectable as grid consumption in HA's Energy
    dashboard.
-8. Credential expiry invokes reauthentication.
-9. Tests prove sensitive portal data is absent from logs and diagnostics.
-10. All repository tests and public validation workflows pass.
-
+9. Credential expiry invokes reauthentication.
+10. Tests prove sensitive portal data is absent from logs and diagnostics.
+11. All repository tests and public validation workflows pass.

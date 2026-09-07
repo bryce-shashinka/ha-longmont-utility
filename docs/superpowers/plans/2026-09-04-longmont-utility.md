@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a public HACS-compatible Home Assistant custom integration that imports City of Longmont quarter-hour electric consumption into the Energy dashboard.
+**Goal:** Build a public HACS-compatible Home Assistant custom integration that preserves City of Longmont quarter-hour consumption and imports hourly aggregates into the Energy dashboard.
 
-**Architecture:** A typed async portal client owns the Cayenta session and export protocol; a pure parser converts the malformed CSV into timezone-aware interval records; an importer writes idempotent cumulative long-term statistics. Home Assistant config flow and coordinator compose those units and expose redacted health diagnostics.
+**Architecture:** A typed async portal client owns the Cayenta session and export protocol; a pure parser converts the malformed CSV into timezone-aware interval records; a source archive preserves those records; and an importer writes idempotent hourly cumulative long-term statistics. Home Assistant config flow and coordinator compose those units and expose redacted health diagnostics.
 
 **Tech Stack:** Python 3.13, Home Assistant custom-component APIs, `aiohttp`, `pytest`, `pytest-homeassistant-custom-component`, Ruff, mypy, Hassfest, HACS validation, GitHub Actions.
 
@@ -14,7 +14,7 @@
 
 - Integration domain is `longmont_utility`; repository name is `ha-longmont-utility`.
 - Version 1 supports Longmont electricity consumption and one selected electric meter per config entry.
-- Ordinary dates contain exactly 96 non-negative finite 15-minute kWh readings; malformed rows are rejected.
+- Ordinary dates contain exactly 96 non-negative finite 15-minute kWh readings; malformed rows are rejected and valid readings are retained in `.storage` at full fidelity.
 - Portal dates use `America/Denver`; DST ambiguity must never be silently shifted.
 - Initial import is at most 90 days; recurring refresh revisits seven complete local dates once daily.
 - Credentials stay in Home Assistant config-entry storage and all private portal identifiers and payloads are redacted.
@@ -30,7 +30,8 @@
 - `custom_components/longmont_utility/models.py`: immutable interval and meter domain types.
 - `custom_components/longmont_utility/csv_parser.py`: pure malformed-export normalization and validation.
 - `custom_components/longmont_utility/client.py`: async Cayenta authentication, discovery, range selection, and two-stage export.
-- `custom_components/longmont_utility/statistics.py`: conversion and idempotent HA external-statistics writes.
+- `custom_components/longmont_utility/source_store.py`: exact 15-minute source archive and correction-safe upserts.
+- `custom_components/longmont_utility/statistics.py`: hourly aggregation and idempotent HA external-statistics writes.
 - `custom_components/longmont_utility/coordinator.py`: refresh orchestration and error mapping.
 - `custom_components/longmont_utility/config_flow.py`: setup and reauthentication UI.
 - `custom_components/longmont_utility/sensor.py`: three diagnostic entities.
@@ -121,41 +122,41 @@ git add custom_components/longmont_utility/client.py tests/test_client.py tests/
 git commit -m "feat: add Longmont portal client"
 ```
 
-### Task 3: Long-term statistics importer
+### Task 3: Full-fidelity source archive and hourly statistics importer
 
 **Files:**
-- Create: `custom_components/longmont_utility/statistics.py`
-- Create: `tests/test_statistics.py`
+- Create: `custom_components/longmont_utility/source_store.py`, `statistics.py`
+- Create: `tests/test_source_store.py`, `tests/test_statistics.py`
 
 **Interfaces:**
 - Consumes: `tuple[ParsedDay, ...]`, a config-entry-derived public-safe statistic suffix, and Home Assistant recorder statistics APIs.
-- Produces: `async_import_consumption_statistics(hass: HomeAssistant, statistic_id: str, days: tuple[ParsedDay, ...]) -> None` and `build_statistic_samples(days: tuple[ParsedDay, ...]) -> list[StatisticData]`.
+- Produces: `SourceArchive.async_upsert(days: tuple[ParsedDay, ...]) -> None`, `SourceArchive.async_read() -> tuple[IntervalReading, ...]`, `async_import_consumption_statistics(hass: HomeAssistant, statistic_id: str, days: tuple[ParsedDay, ...]) -> None`, and `build_hourly_statistic_samples(days: tuple[ParsedDay, ...]) -> list[StatisticData]`.
 
 - [ ] **Step 1: Write failing statistics tests**
 
-Assert 15-minute samples have cumulative `sum` and interval `state`, stable metadata uses kWh/energy/total-increasing semantics, repeat imports do not add consumption, corrected intervals replace recent integration-owned samples, and statistic IDs contain no account or meter references.
+Assert archive upserts preserve all 96 exact Decimal readings per day using UTC timestamps and decimal strings, repeat upserts do not duplicate timestamps, and revisions replace values. Assert each four source intervals produce one hourly sample with cumulative `sum` and hourly `state`, stable metadata uses kWh/energy/total-increasing semantics, repeat imports do not add consumption, corrected intervals replace recent integration-owned samples, and statistic IDs contain no account or meter references.
 
 - [ ] **Step 2: Run focused tests and confirm failure**
 
-Run: `python -m pytest tests/test_statistics.py -q`
+Run: `python -m pytest tests/test_source_store.py tests/test_statistics.py -q`
 
 Expected: FAIL because the statistics module does not exist.
 
 - [ ] **Step 3: Implement conversion and correction-safe import**
 
-Build deterministic cumulative values in timestamp order. Read the prior sample immediately before the replacement range, add new interval energy to that baseline, clear only this integration-owned statistic's overlapping range through the supported recorder API, then call `async_add_external_statistics`. Refuse statistic IDs outside the `longmont_utility:` namespace.
+Store source records as `{UTC ISO timestamp: decimal kWh string}` in a versioned config-entry-specific Home Assistant `Store`; update atomically and retain them until entry removal. Build deterministic hourly values by summing consecutive groups of four source intervals in timestamp order. Read the prior sample immediately before the replacement range, add each hourly value to that baseline, and call `async_add_external_statistics`, whose import semantics update matching hourly starts. Refuse statistic IDs outside the `longmont_utility:` namespace.
 
 - [ ] **Step 4: Run statistics and parser tests**
 
-Run: `python -m pytest tests/test_statistics.py tests/test_csv_parser.py -q && ruff check custom_components tests && mypy custom_components/longmont_utility`
+Run: `python -m pytest tests/test_source_store.py tests/test_statistics.py tests/test_csv_parser.py -q && ruff check custom_components tests && mypy custom_components/longmont_utility`
 
 Expected: all commands exit 0.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add custom_components/longmont_utility/statistics.py tests/test_statistics.py
-git commit -m "feat: import Longmont energy statistics"
+git add custom_components/longmont_utility/source_store.py custom_components/longmont_utility/statistics.py tests/test_source_store.py tests/test_statistics.py
+git commit -m "feat: archive and import Longmont energy data"
 ```
 
 ### Task 4: Config flow, coordinator, and reauthentication

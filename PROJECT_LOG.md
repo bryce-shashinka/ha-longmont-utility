@@ -22,6 +22,9 @@
 - The CSV normalizer and async portal client are implemented on the
   `initial-implementation` branch.
 - Nineteen focused tests pass along with Ruff and strict mypy checks.
+- Confirmed Home Assistant external long-term statistics are hourly. The design
+  now preserves all validated 15-minute readings in an integration-owned source
+  archive and publishes four-reading hourly sums to the Energy dashboard.
 - GitHub publication is pending because the local `gh` authentication for the
   intended owner is expired.
 
