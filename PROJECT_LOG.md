@@ -21,14 +21,19 @@
 - The approved implementation plan is committed.
 - The CSV normalizer and async portal client are implemented on the
   `initial-implementation` branch.
-- Nineteen focused tests pass along with Ruff and strict mypy checks.
+- Twenty-nine focused tests pass along with Ruff and strict mypy checks.
 - Confirmed Home Assistant external long-term statistics are hourly. The design
   now preserves all validated 15-minute readings in an integration-owned source
   archive and publishes four-reading hourly sums to the Energy dashboard.
+- Added the versioned source archive and the Home Assistant 2026.9 recorder
+  adapter. Re-imports rebuild the complete retained series so utility revisions
+  replace the matching hourly rows while the exact source values remain intact.
+- Raised the minimum runtime to Home Assistant 2026.9.1 and Python 3.14.2 to
+  match the API used and verified the integration against that release.
 - GitHub publication is pending because the local `gh` authentication for the
   intended owner is expired.
 
 ## Next step
 
-Implement the Home Assistant long-term statistics adapter using test-driven
-development.
+Implement config flow, coordinator refresh, and reauthentication using
+test-driven development.

@@ -6,13 +6,14 @@
 
 **Architecture:** A typed async portal client owns the Cayenta session and export protocol; a pure parser converts the malformed CSV into timezone-aware interval records; a source archive preserves those records; and an importer writes idempotent hourly cumulative long-term statistics. Home Assistant config flow and coordinator compose those units and expose redacted health diagnostics.
 
-**Tech Stack:** Python 3.13, Home Assistant custom-component APIs, `aiohttp`, `pytest`, `pytest-homeassistant-custom-component`, Ruff, mypy, Hassfest, HACS validation, GitHub Actions.
+**Tech Stack:** Python 3.14, Home Assistant 2026.9 custom-component APIs, `aiohttp`, `pytest`, `pytest-homeassistant-custom-component`, Ruff, mypy, Hassfest, HACS validation, GitHub Actions.
 
 **Spec:** `SPEC.md` and `docs/superpowers/specs/2026-09-04-longmont-utility-design.md`
 
 ## Global Constraints
 
 - Integration domain is `longmont_utility`; repository name is `ha-longmont-utility`.
+- Minimum runtime is Home Assistant 2026.9.1 with Python 3.14.2.
 - Version 1 supports Longmont electricity consumption and one selected electric meter per config entry.
 - Ordinary dates contain exactly 96 non-negative finite 15-minute kWh readings; malformed rows are rejected and valid readings are retained in `.storage` at full fidelity.
 - Portal dates use `America/Denver`; DST ambiguity must never be silently shifted.

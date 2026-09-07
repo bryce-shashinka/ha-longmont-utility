@@ -34,8 +34,7 @@ Home Assistant long-term statistics.
 
 ## Supported environment
 
-- Current stable Home Assistant and the oldest version required by current
-  HACS validation policy at release time.
+- Home Assistant 2026.9.1 or newer and Python 3.14.2 or newer.
 - City of Longmont Utility Billing guest accounts with **Smart Meter →
   Electricity** permission.
 - One electric meter per config entry in version 1.
