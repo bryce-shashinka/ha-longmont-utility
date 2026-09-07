@@ -54,10 +54,6 @@ class _Response(Protocol):
     async def __aexit__(self, *args: object) -> None: ...
 
 
-class _Session(Protocol):
-    def request(self, method: str, url: str, **kwargs: Any) -> _Response: ...
-
-
 @dataclass(frozen=True, slots=True)
 class MeterInfo:
     """Opaque references for an electric meter authorized to the account."""
@@ -115,17 +111,27 @@ def _parse_html(payload: str) -> _PortalHtmlParser:
 class LongmontPortalClient:
     """Operate one serialized authenticated Longmont portal session."""
 
-    def __init__(self, session: _Session, username: str, password: str) -> None:
+    def __init__(
+        self,
+        session: Any,
+        username: str,
+        password: str,
+        *,
+        base_url: str = "",
+    ) -> None:
         self._session = session
         self._username = username
         self._password = password
+        self._base_url = base_url.rstrip("/")
         self._lock = asyncio.Lock()
         self._account_page: str | None = None
 
     async def _text(self, method: str, path: str, **kwargs: Any) -> tuple[str, str]:
         for attempt in range(3):
             try:
-                async with self._session.request(method, path, **kwargs) as response:
+                async with self._session.request(
+                    method, f"{self._base_url}{path}", **kwargs
+                ) as response:
                     if response.status == 429 or response.status >= 500:
                         if attempt < 2:
                             await asyncio.sleep(0)
@@ -232,7 +238,9 @@ class LongmontPortalClient:
                 raise PortalProtocolError("utility portal returned no export key")
             path = f"/app/ExcelExport?key={quote(export_key, safe='')}"
             try:
-                async with self._session.request("POST", path) as response:
+                async with self._session.request(
+                    "POST", f"{self._base_url}{path}"
+                ) as response:
                     if response.status != 200:
                         raise PortalProtocolError("utility export request failed")
                     content_type = response.headers.get("Content-Type", "").lower()

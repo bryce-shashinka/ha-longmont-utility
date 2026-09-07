@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .models import ParsedDay
+from .models import IntervalReading, ParsedDay
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,40 +49,51 @@ def build_hourly_statistic_samples(
 ) -> list[HourlyStatistic]:
     """Sum four quarter-hour readings into each cumulative hourly row."""
 
-    cumulative = baseline
+    readings = tuple(
+        interval
+        for day in sorted(days, key=lambda item: item.reading_date)
+        for interval in day.intervals
+    )
+    return build_hourly_samples_from_readings(readings, baseline=baseline)
+
+
+def build_hourly_samples_from_readings(
+    readings: tuple[IntervalReading, ...],
+    *,
+    baseline: Decimal = Decimal(),
+) -> list[HourlyStatistic]:
+    """Build deterministic hourly statistics from retained source readings."""
+
+    ordered = sorted(readings, key=lambda item: item.start.astimezone(UTC))
     samples: list[HourlyStatistic] = []
-    for day in sorted(days, key=lambda item: item.reading_date):
-        intervals = day.intervals
-        if len(intervals) != 96:
-            raise ValueError("a source day must contain 96 intervals")
-        for offset in range(0, 96, 4):
-            group = intervals[offset : offset + 4]
-            first = group[0].start
-            if first.minute != 0 or any(
-                reading.start.hour != first.hour
-                or reading.start.date() != first.date()
-                for reading in group
-            ):
-                raise ValueError("source intervals do not align to one local hour")
-            state = sum(
-                (reading.energy_kwh for reading in group),
-                start=Decimal(),
+    cumulative = baseline
+    for offset in range(0, len(ordered), 4):
+        group = ordered[offset : offset + 4]
+        if len(group) != 4:
+            raise ValueError("source archive contains an incomplete hour")
+        starts = [reading.start.astimezone(UTC) for reading in group]
+        first = starts[0]
+        if first.minute != 0 or any(
+            start != first.replace(minute=15 * index)
+            for index, start in enumerate(starts)
+        ):
+            raise ValueError("source intervals do not align to one hour")
+        state = sum((reading.energy_kwh for reading in group), start=Decimal())
+        cumulative += state
+        samples.append(
+            HourlyStatistic(
+                start=first,
+                state=float(state),
+                sum=float(cumulative),
             )
-            cumulative += state
-            samples.append(
-                HourlyStatistic(
-                    start=first.astimezone(UTC),
-                    state=float(state),
-                    sum=float(cumulative),
-                )
-            )
+        )
     return samples
 
 
 def async_import_consumption_statistics(
     hass: HomeAssistant,
     statistic_id: str,
-    days: tuple[ParsedDay, ...],
+    readings: tuple[IntervalReading, ...],
 ) -> None:
     """Upsert the complete retained archive into HA's hourly statistics."""
 
@@ -98,6 +109,6 @@ def async_import_consumption_statistics(
     )
     statistics = (
         StatisticData(start=item.start, state=item.state, sum=item.sum)
-        for item in build_hourly_statistic_samples(days)
+        for item in build_hourly_samples_from_readings(readings)
     )
     async_add_external_statistics(hass, metadata, statistics)

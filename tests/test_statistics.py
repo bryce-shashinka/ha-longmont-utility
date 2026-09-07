@@ -94,7 +94,7 @@ def test_imports_hourly_samples_with_energy_metadata(
     async_import_consumption_statistics(
         hass,
         "longmont_utility:0123456789abcdef_energy_consumption",
-        (day,),
+        day.intervals,
     )
 
     metadata = captured["metadata"]

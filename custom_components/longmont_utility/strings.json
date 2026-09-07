@@ -1,0 +1,30 @@
+{
+  "config": {
+    "abort": {"already_configured": "This meter is already configured."},
+    "error": {
+      "cannot_connect": "Unable to connect to the utility portal.",
+      "invalid_auth": "Invalid email or password."
+    },
+    "step": {
+      "user": {
+        "data": {"password": "Password", "username": "Email"},
+        "title": "Connect to Longmont Utility"
+      },
+      "meter": {
+        "data": {"meter_ref": "Electric meter"},
+        "title": "Select a meter"
+      },
+      "reauth_confirm": {
+        "data": {"password": "Password", "username": "Email"},
+        "title": "Reconnect to Longmont Utility"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "data_age": {"name": "Utility data age"},
+      "last_success": {"name": "Last successful update"},
+      "latest_interval": {"name": "Latest utility interval"}
+    }
+  }
+}
