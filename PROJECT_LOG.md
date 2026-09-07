@@ -93,3 +93,20 @@ Remediation was applied, so the required clean functionality/security pass must
 be rerun before release. Hassfest and HACS validation remain queued in CI
 because their official validators are GitHub Actions rather than local Python
 packages.
+
+## 2026-09-07 — Full audit, clean local pass
+
+- Phase 2: 36 tests passed with zero failures; Ruff, strict mypy,
+  byte-compilation, metadata parsing, and `pip check` all passed. No TODOs,
+  debug statements, dead dependencies, or uncommitted build artifacts were
+  found.
+- Phase 3: Bandit returned zero findings. Source, working-tree, and Git-history
+  secret/private-identifier scans returned zero matches. `pip-audit` returned
+  zero unignored advisories; the five ignored records are duplicate aliases of
+  the three documented Home Assistant-owned `cryptography` advisories from the
+  remediation pass.
+- Required post-security Phase 2 rerun: all 36 tests, Ruff, strict mypy, and
+  byte-compilation passed again with zero project findings.
+- Local functionality and security gates are clean. Official Hassfest and HACS
+  results must still pass on the public GitHub repository before the release is
+  tagged or described as production-ready.
