@@ -10,6 +10,8 @@ from typing import Any, Protocol
 from urllib.parse import parse_qs, quote, urlparse
 from zoneinfo import ZoneInfo
 
+from aiohttp import ClientTimeout
+
 from .const import PORTAL_TIME_ZONE
 from .csv_parser import parse_smart_meter_csv
 from .models import ParsedDay
@@ -127,6 +129,7 @@ class LongmontPortalClient:
         self._account_page: str | None = None
 
     async def _text(self, method: str, path: str, **kwargs: Any) -> tuple[str, str]:
+        kwargs.setdefault("timeout", ClientTimeout(total=30))
         for attempt in range(3):
             try:
                 async with self._session.request(
@@ -134,7 +137,12 @@ class LongmontPortalClient:
                 ) as response:
                     if response.status == 429 or response.status >= 500:
                         if attempt < 2:
-                            await asyncio.sleep(0)
+                            retry_after = response.headers.get("Retry-After", "0")
+                            try:
+                                delay = min(30.0, max(0.0, float(retry_after)))
+                            except ValueError:
+                                delay = 0.0
+                            await asyncio.sleep(delay)
                             continue
                         raise PortalUnavailable("utility portal request failed")
                     if response.status >= 400:
@@ -239,7 +247,9 @@ class LongmontPortalClient:
             path = f"/app/ExcelExport?key={quote(export_key, safe='')}"
             try:
                 async with self._session.request(
-                    "POST", f"{self._base_url}{path}"
+                    "POST",
+                    f"{self._base_url}{path}",
+                    timeout=ClientTimeout(total=30),
                 ) as response:
                     if response.status != 200:
                         raise PortalProtocolError("utility export request failed")

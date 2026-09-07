@@ -25,12 +25,13 @@ class FakeResponse:
         body: bytes | None = None,
         url: str = "https://myutilityaccount.longmontcolorado.gov/app/capricorn",
         content_type: str = "text/html",
+        headers: dict[str, str] | None = None,
     ) -> None:
         self.status = status
         self._text = text
         self._body = body if body is not None else text.encode()
         self.url = url
-        self.headers = {"Content-Type": content_type}
+        self.headers = {"Content-Type": content_type, **(headers or {})}
 
     async def text(self) -> str:
         return self._text
@@ -158,22 +159,17 @@ def test_downloads_and_parses_the_two_stage_export() -> None:
     )
 
     assert parsed[0].total_kwh == 12
-    assert session.requests[0] == (
-        "POST",
-        "/app/index.jsp",
-        {
-            "data": {
-                "para": "smartMeterConsumV3",
-                "userAction": "refreshChart",
-                "type": "daily",
-                "inquiryType": "hydro",
-                "dailyFromDate": "2026-08-05",
-                "dailyToDate": "2026-08-05",
-                "tab": "SMCONSUM",
-                "selectedMeterId": "meter-test-1",
-            }
-        },
-    )
+    assert session.requests[0][:2] == ("POST", "/app/index.jsp")
+    assert session.requests[0][2]["data"] == {
+        "para": "smartMeterConsumV3",
+        "userAction": "refreshChart",
+        "type": "daily",
+        "inquiryType": "hydro",
+        "dailyFromDate": "2026-08-05",
+        "dailyToDate": "2026-08-05",
+        "tab": "SMCONSUM",
+        "selectedMeterId": "meter-test-1",
+    }
     assert session.requests[-2][:2] == (
         "GET",
         "/app/capricorn?para=ajaxDownloadConsumptionData&type=smartmeterV3"
@@ -241,6 +237,40 @@ def test_retries_transient_portal_failures_at_most_three_times() -> None:
         ("GET", "/app/login.jsp"),
         ("GET", "/app/login.jsp"),
     ]
+
+
+def test_respects_bounded_retry_after(monkeypatch: pytest.MonkeyPatch) -> None:
+    sleeps: list[float] = []
+
+    async def capture_sleep(delay: float) -> None:
+        sleeps.append(delay)
+
+    monkeypatch.setattr(
+        "custom_components.longmont_utility.client.asyncio.sleep", capture_sleep
+    )
+    session = FakeSession(
+        [
+            FakeResponse(status=429, headers={"Retry-After": "120"}),
+            FakeResponse(text=LOGIN_HTML),
+            FakeResponse(text=ACCOUNT_HTML),
+        ]
+    )
+    client = LongmontPortalClient(session, "person@example.invalid", "not-a-secret")
+
+    asyncio.run(client.authenticate())
+
+    assert sleeps == [30.0]
+
+
+def test_requests_have_bounded_timeouts() -> None:
+    session = FakeSession(
+        [FakeResponse(text=LOGIN_HTML), FakeResponse(text=ACCOUNT_HTML)]
+    )
+    client = LongmontPortalClient(session, "person@example.invalid", "not-a-secret")
+
+    asyncio.run(client.authenticate())
+
+    assert all(request[2]["timeout"].total == 30 for request in session.requests)
 
 
 def test_interval_timezone_is_longmont_local_time() -> None:

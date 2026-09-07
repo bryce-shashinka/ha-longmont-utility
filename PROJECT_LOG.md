@@ -45,3 +45,51 @@
 
 Run the mandatory full functionality and security audit, resolve every finding,
 then publish the GitHub repository once command-line authentication is restored.
+
+## 2026-09-07 — Full audit, remediation pass 1
+
+### Documentation
+
+- Compared `README.md`, `SPEC.md`, and implementation behavior. Installation,
+  source retention, aggregation, refresh, privacy, and removal descriptions
+  match the code. No environment variables or user-facing API endpoints exist.
+- Verified all documented URLs and current CI usage against the official Home
+  Assistant actions and HACS repositories.
+
+### Functionality and cleanup
+
+- Found that transient retries did not honor the portal's `Retry-After` header
+  and network operations relied on the parent session timeout. Added a bounded
+  30-second `Retry-After` delay and explicit 30-second request timeouts, with
+  regression tests.
+- Upgraded the test runner requirement from vulnerable pytest 8.4 to pytest
+  9.0.3 or newer.
+- Results after fixes: 36 tests passed, strict mypy passed for 12 production
+  modules, Ruff passed, byte-compilation passed, JSON/YAML parsing passed, and
+  `pip check` reported no broken requirements.
+- The only test warning is emitted by Home Assistant's own HTTP module for its
+  aiohttp application subclass; this integration neither invokes nor controls
+  that deprecated class.
+
+### Security
+
+- Bandit reported zero source-code findings.
+- Secret-pattern scans and targeted scans of the working tree and complete Git
+  history found no private portal identifiers or credentials.
+- The integration manifest has no third-party runtime requirements, so it adds
+  zero deployable dependency vulnerabilities.
+- `pip-audit` found and the project fixed the pytest test-tool vulnerability.
+  It also reports three advisory IDs (duplicated across aliases) in
+  `cryptography==48.0.1`, an exact transitive pin of the Home Assistant 2026.9.1
+  test/runtime baseline. This integration does not import cryptography or use
+  the affected certificate-path or PKCS#7 APIs; the package is supplied and
+  controlled by Home Assistant, cannot be overridden by this repository, and
+  is explicitly excluded from this repository's dependency gate pending an
+  upstream Home Assistant release with a remediated pin.
+
+### Audit status
+
+Remediation was applied, so the required clean functionality/security pass must
+be rerun before release. Hassfest and HACS validation remain queued in CI
+because their official validators are GitHub Actions rather than local Python
+packages.

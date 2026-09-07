@@ -7,8 +7,8 @@ from typing import Any, Protocol
 
 from homeassistant.core import HomeAssistant
 
-from .coordinator import CoordinatorData, LongmontConfigEntry
 from .const import INTEGRATION_VERSION
+from .coordinator import CoordinatorData, LongmontConfigEntry
 
 
 class _Coordinator(Protocol):
