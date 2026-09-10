@@ -123,5 +123,16 @@ packages.
   icon with no municipal seal, text, or official Longmont branding. The icon
   was generated with the built-in image tool from a project-specific prompt
   describing a lightning bolt and four interval bars.
-- The repository topic must be set through GitHub settings before the next HACS
-  run can pass.
+- Added the public repository topics `home-assistant`, `hacs`, `smart-meter`,
+  `longmont`, and `energy` through GitHub settings.
+- Official run 2 passed the Python quality and Hassfest jobs. Its sole failure
+  was HACS's repository-topic check because the run completed before the topics
+  were saved; the next pushed commit will validate the corrected repository
+  metadata.
+- During the clean-pass rerun, `pip-audit` identified PYSEC-2026-3721 in the
+  isolated development environment's `pip==26.1.2`. Upgraded that local tool to
+  the fixed 26.2 release without changing integration runtime dependencies.
+- Repeated the complete security-to-functionality sequence after the upgrade:
+  `pip-audit` found zero unignored advisories, Bandit and private-data scans
+  found zero issues, and all 36 tests, Ruff, strict mypy, byte-compilation,
+  metadata parsing, `pip check`, and diff checks passed.
