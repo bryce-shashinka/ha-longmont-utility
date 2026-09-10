@@ -110,3 +110,18 @@ packages.
 - Local functionality and security gates are clean. Official Hassfest and HACS
   results must still pass on the public GitHub repository before the release is
   tagged or described as production-ready.
+
+## 2026-09-09 — GitHub validator remediation
+
+- Created and pushed the public `bryce-shashinka/ha-longmont-utility`
+  repository.
+- Official run 1 confirmed the Python quality job but found three release
+  metadata omissions: Hassfest required the imported `recorder` integration in
+  `dependencies`; HACS required a local brand icon and at least one repository
+  topic.
+- Added the recorder dependency, the US country scope, and an original local
+  icon with no municipal seal, text, or official Longmont branding. The icon
+  was generated with the built-in image tool from a project-specific prompt
+  describing a lightning bolt and four interval bars.
+- The repository topic must be set through GitHub settings before the next HACS
+  run can pass.
