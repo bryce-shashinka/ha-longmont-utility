@@ -136,3 +136,20 @@ packages.
   `pip-audit` found zero unignored advisories, Bandit and private-data scans
   found zero issues, and all 36 tests, Ruff, strict mypy, byte-compilation,
   metadata parsing, `pip check`, and diff checks passed.
+
+## 2026-09-09 — Final audit summary
+
+- The final local audit completed a clean documentation, functionality,
+  cleanup, and security pass with zero project findings. All 36 tests passed;
+  Ruff, strict mypy, byte-compilation, metadata parsing, dependency integrity,
+  Bandit, dependency auditing, private-data scans, and diff checks were clean.
+- GitHub Actions run 3 passed all official jobs: Python quality, Home Assistant
+  Hassfest, and HACS validation. This confirms the repository metadata,
+  manifest, local branding, and public topics satisfy the release validators.
+- No real portal source file, address, account number, meter identifier, guest
+  email, cookie, or credential is present in the working tree or Git history.
+  The integration retains exact imported quarter-hour readings locally in Home
+  Assistant while generating hourly Energy statistics from that source archive.
+- Audit result: zero functionality issues and zero integration-owned security
+  issues in one clean pass. The repository is ready for a release tag after
+  this final audit record's own CI run passes.
