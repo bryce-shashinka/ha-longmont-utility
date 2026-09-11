@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import ssl
 from dataclasses import dataclass
 from datetime import date
 from html.parser import HTMLParser
+from pathlib import Path
 from typing import Any, Protocol
 from urllib.parse import parse_qs, quote, urlparse
 from zoneinfo import ZoneInfo
@@ -24,6 +26,17 @@ EXPORT_KEY_PATH = (
     "/app/capricorn?para=ajaxDownloadConsumptionData&type=smartmeterV3"
     "&inquiryType=hydro&isGenerationDataAvailable=false"
 )
+PORTAL_INTERMEDIATE_CA = Path(__file__).with_name(
+    "sectigo_public_server_authentication_ca_dv_r36.pem"
+)
+
+
+def _portal_ssl_context() -> ssl.SSLContext:
+    """Return normal system trust plus the portal's omitted intermediate CA."""
+
+    context = ssl.create_default_context()
+    context.load_verify_locations(cafile=PORTAL_INTERMEDIATE_CA)
+    return context
 
 
 class PortalError(Exception):
@@ -125,11 +138,13 @@ class LongmontPortalClient:
         self._username = username
         self._password = password
         self._base_url = base_url.rstrip("/")
+        self._ssl_context = _portal_ssl_context()
         self._lock = asyncio.Lock()
         self._account_page: str | None = None
 
     async def _text(self, method: str, path: str, **kwargs: Any) -> tuple[str, str]:
         kwargs.setdefault("timeout", ClientTimeout(total=30))
+        kwargs.setdefault("ssl", self._ssl_context)
         for attempt in range(3):
             try:
                 async with self._session.request(
@@ -250,6 +265,7 @@ class LongmontPortalClient:
                     "POST",
                     f"{self._base_url}{path}",
                     timeout=ClientTimeout(total=30),
+                    ssl=self._ssl_context,
                 ) as response:
                     if response.status != 200:
                         raise PortalProtocolError("utility export request failed")

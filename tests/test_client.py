@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import ssl
 from collections import deque
 from datetime import date
+from hashlib import sha256
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -271,6 +273,26 @@ def test_requests_have_bounded_timeouts() -> None:
     asyncio.run(client.authenticate())
 
     assert all(request[2]["timeout"].total == 30 for request in session.requests)
+
+
+def test_requests_trust_the_portal_intermediate_certificate() -> None:
+    session = FakeSession(
+        [FakeResponse(text=LOGIN_HTML), FakeResponse(text=ACCOUNT_HTML)]
+    )
+    client = LongmontPortalClient(session, "person@example.invalid", "not-a-secret")
+
+    asyncio.run(client.authenticate())
+
+    context = session.requests[0][2]["ssl"]
+    assert isinstance(context, ssl.SSLContext)
+    fingerprints = {
+        sha256(certificate).hexdigest()
+        for certificate in context.get_ca_certs(binary_form=True)
+    }
+    assert (
+        "8c54c334b66ba4e426772af4a3f9136c19a1aec729fdb28c535c07a5a4ef22e0"
+        in fingerprints
+    )
 
 
 def test_interval_timezone_is_longmont_local_time() -> None:

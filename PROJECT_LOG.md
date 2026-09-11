@@ -153,3 +153,19 @@ packages.
 - Audit result: zero functionality issues and zero integration-owned security
   issues in one clean pass. The repository is ready for a release tag after
   this final audit record's own CI run passes.
+
+## 2026-09-10 — Live portal TLS remediation
+
+- The first live Home Assistant config-flow attempt returned `cannot_connect`
+  even though the restricted guest credentials were verified in the portal UI.
+- Reproduced the failure before authentication: the portal serves only its leaf
+  certificate and omits its advertised Sectigo Public Server Authentication CA
+  DV R36 intermediate, causing standard OpenSSL/aiohttp verification to fail
+  with `unable to verify the first certificate`.
+- Added that specific public intermediate to the portal client's normal system
+  trust context. Hostname and certificate verification remain enabled; the
+  integration does not use an insecure verification bypass.
+- Added a regression test that verifies every portal request receives a TLS
+  context containing the expected intermediate fingerprint. The test failed
+  before the fix and passed afterward; the full suite now passes 37 tests along
+  with Ruff, strict mypy, byte-compilation, and diff checks.
