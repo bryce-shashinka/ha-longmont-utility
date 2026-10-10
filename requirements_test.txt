@@ -1,4 +1,4 @@
 homeassistant==2026.9.1
 mypy>=1.17,<2
 pytest>=9.0.3,<10
-ruff>=0.12,<1
+ruff==0.17.0
