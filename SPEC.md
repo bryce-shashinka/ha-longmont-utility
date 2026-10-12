@@ -47,10 +47,16 @@ client interface:
 1. Establish an authenticated Cayenta/Capricorn session.
 2. Select the authorized account and electric meter.
 3. Load the Smart Meter consumption view and set a daily date range.
-4. Request a short-lived export key:
+4. Submit the date-range refresh to `POST /app/capricorn`; the form's static
+   `/app/index.jsp` action is stale and the portal UI rewrites it in JavaScript.
+5. Request a short-lived export key:
    `GET /app/capricorn?para=ajaxDownloadConsumptionData&type=smartmeterV3&inquiryType=hydro&isGenerationDataAvailable=false`
-5. Retrieve the CSV:
+6. Retrieve the CSV:
    `POST /app/ExcelExport?key=<short-lived-key>`
+
+The CSV response currently uses the nonstandard `application/force-download`
+media type. It is accepted only when `Content-Disposition` marks it as a `.csv`
+attachment; normal CSV media types remain accepted.
 
 The server appears to keep the selected meter and date range in session state,
 so the client must serialize operations within a session. It must never log
@@ -63,6 +69,7 @@ raw response bodies.
 - Columns 2–97 are 96 consecutive 15-minute kWh intervals.
 - The next populated field is the daily kWh total.
 - Extra trailing empty fields are ignored.
+- Blank rows and the portal's single-field `* Note:` footer are ignored.
 - Header labels are not used to determine interval count because the observed
   header has only 26 fields and is incorrect.
 - A row is accepted only if it contains exactly 96 finite, non-negative
@@ -139,10 +146,11 @@ bounded exponential backoff.
 - Invalid credentials: abort setup or start reauthentication.
 - Portal markup/protocol change: surface `UpdateFailed`, preserve prior data,
   and include only a redacted error category in diagnostics.
-- Malformed CSV row: reject the row, retain unaffected days, and expose a
-  redacted validation failure.
+- Malformed CSV row: reject the export, retain the previously archived source,
+  and expose a redacted validation failure.
 - Daily-total mismatch: reject the affected row.
-- Partial date range: import valid complete rows and report partial success.
+- Partial date range: import the complete validated rows that the portal
+  returns; an entirely empty export is rejected.
 - Rate limiting or server errors: retry with bounded backoff and respect
   `Retry-After` when present.
 

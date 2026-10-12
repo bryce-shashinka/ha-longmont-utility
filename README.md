@@ -31,9 +31,8 @@ with this restricted permission, so protect the account normally.
 4. Go to **Settings → Devices & services → Add integration**, search for
    **Longmont Utility**, and enter the dedicated guest credentials.
 
-Until the repository is published, advanced users can copy
-`custom_components/longmont_utility` into the same directory under their Home
-Assistant configuration and restart.
+Advanced users can alternatively copy `custom_components/longmont_utility`
+into the same directory under their Home Assistant configuration and restart.
 
 ## Energy dashboard
 
@@ -58,6 +57,8 @@ stored there.
 - Ordinary dates must contain 96 readings. DST transition dates are rejected
   rather than guessed because the export does not disambiguate them.
 - Invalid or internally inconsistent rows are not imported.
+- The portal's non-data `* Note:` footer is ignored; other malformed rows still
+  fail validation and leave the prior archive unchanged.
 - Expired credentials trigger Home Assistant's reauthentication flow.
 - Portal outages preserve previously imported data and are retried later.
 

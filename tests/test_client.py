@@ -161,7 +161,7 @@ def test_downloads_and_parses_the_two_stage_export() -> None:
     )
 
     assert parsed[0].total_kwh == 12
-    assert session.requests[0][:2] == ("POST", "/app/index.jsp")
+    assert session.requests[0][:2] == ("POST", "/app/capricorn")
     assert session.requests[0][2]["data"] == {
         "para": "smartMeterConsumV3",
         "userAction": "refreshChart",
@@ -181,6 +181,30 @@ def test_downloads_and_parses_the_two_stage_export() -> None:
         "POST",
         "/app/ExcelExport?key=synthetic-export-key",
     )
+
+
+def test_accepts_portal_force_download_for_csv_attachment() -> None:
+    session = FakeSession(
+        [
+            FakeResponse(text=METER_HTML),
+            FakeResponse(text="synthetic-export-key"),
+            FakeResponse(
+                body=synthetic_csv().encode(),
+                content_type="application/force-download",
+                headers={
+                    "Content-Disposition": 'attachment; filename="consumption.csv"'
+                },
+            ),
+        ]
+    )
+    client = LongmontPortalClient(session, "person@example.invalid", "not-a-secret")
+    meter = MeterInfo("acct-test-1", "meter-test-1", "Longmont electric meter")
+
+    parsed = asyncio.run(
+        client.download_usage(meter, date(2026, 8, 5), date(2026, 8, 5))
+    )
+
+    assert parsed[0].total_kwh == 12
 
 
 def test_rejects_ranges_over_ninety_days() -> None:
