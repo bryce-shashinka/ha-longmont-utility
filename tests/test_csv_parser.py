@@ -72,6 +72,18 @@ def test_rejects_duplicate_dates(csv_payload_factory) -> None:
         parse_smart_meter_csv(payload, DENVER)
 
 
+def test_skips_the_portal_footer_note(csv_payload_factory) -> None:
+    payload = csv_payload_factory(
+        [(date(2026, 8, 5), ordinary_intervals(), Decimal("12.000"))]
+    )
+    payload += "\n" + ",".join([""] * 27 + ['"* Note: portal timezone notice"'])
+
+    parsed = parse_smart_meter_csv(payload, DENVER)
+
+    assert len(parsed) == 1
+    assert parsed[0].reading_date == date(2026, 8, 5)
+
+
 @pytest.mark.parametrize("transition_date", [date(2026, 3, 8), date(2026, 11, 1)])
 def test_rejects_96_values_on_daylight_saving_transition(
     csv_payload_factory,

@@ -169,3 +169,30 @@ packages.
   context containing the expected intermediate fingerprint. The test failed
   before the fix and passed afterward; the full suite now passes 37 tests along
   with Ruff, strict mypy, byte-compilation, and diff checks.
+
+## 2026-09-10 — Live import remediation
+
+- The restricted guest account authenticated and meter discovery succeeded on
+  the installed Home Assistant 2026.9.1 instance. The first refresh then
+  exposed three additional differences between the observed browser workflow
+  and the live non-browser contract.
+- Corrected the daily refresh POST target from the form's stale
+  `/app/index.jsp` action to the `/app/capricorn` endpoint selected by the
+  portal's own JavaScript.
+- Accepted the portal's `application/force-download` response only when its
+  content disposition identifies a `.csv` attachment. HTML and other payloads
+  remain rejected.
+- Confirmed the supplied original CSV and the current live export end with a
+  sparse `* Note:` footer after blank lines. The parser now ignores only that
+  recognizable non-data row and continues to reject malformed measurement
+  rows.
+- Changed the Home Assistant statistics handoff from a one-shot generator to a
+  list because Home Assistant validates the iterable before placing it on the
+  recorder queue. The generator was otherwise exhausted before insertion.
+- Added regression coverage for all three behaviors. The suite now passes 39
+  tests with Ruff, strict mypy, byte-compilation, and diff checks clean.
+- Deployed the changes to the live Home Assistant instance. Verified the entry
+  is loaded, three health sensors are available, 6,624 exact quarter-hour
+  readings are retained in the private source archive, and 1,656 hourly
+  statistics are committed for the same July 2 through September 8 local-time
+  coverage.

@@ -243,7 +243,7 @@ class LongmontPortalClient:
         async with self._lock:
             await self._text(
                 "POST",
-                "/app/index.jsp",
+                "/app/capricorn",
                 data={
                     "para": "smartMeterConsumV3",
                     "userAction": "refreshChart",
@@ -270,7 +270,14 @@ class LongmontPortalClient:
                     if response.status != 200:
                         raise PortalProtocolError("utility export request failed")
                     content_type = response.headers.get("Content-Type", "").lower()
-                    if "csv" not in content_type:
+                    content_disposition = response.headers.get(
+                        "Content-Disposition", ""
+                    ).lower()
+                    is_csv_attachment = (
+                        "attachment" in content_disposition
+                        and ".csv" in content_disposition
+                    )
+                    if "csv" not in content_type and not is_csv_attachment:
                         raise PortalProtocolError("utility export was not CSV")
                     payload = (await response.read()).decode("utf-8-sig")
             except PortalError:

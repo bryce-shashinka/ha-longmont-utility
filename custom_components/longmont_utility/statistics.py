@@ -107,8 +107,8 @@ def async_import_consumption_statistics(
         unit_class=EnergyConverter.UNIT_CLASS,
         unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
     )
-    statistics = (
+    statistics = [
         StatisticData(start=item.start, state=item.state, sum=item.sum)
         for item in build_hourly_samples_from_readings(readings)
-    )
+    ]
     async_add_external_statistics(hass, metadata, statistics)

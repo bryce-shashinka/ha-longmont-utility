@@ -83,6 +83,7 @@ def test_imports_hourly_samples_with_energy_metadata(
     def capture_import(hass, metadata, statistics) -> None:
         captured["hass"] = hass
         captured["metadata"] = metadata
+        captured["statistics_is_list"] = isinstance(statistics, list)
         captured["statistics"] = list(statistics)
 
     monkeypatch.setattr(
@@ -100,6 +101,7 @@ def test_imports_hourly_samples_with_energy_metadata(
     metadata = captured["metadata"]
     statistics = captured["statistics"]
     assert captured["hass"] is hass
+    assert captured["statistics_is_list"] is True
     assert metadata["source"] == "longmont_utility"
     assert metadata["unit_of_measurement"] == "kWh"
     assert metadata["has_sum"] is True

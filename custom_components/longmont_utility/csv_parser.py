@@ -38,6 +38,13 @@ def _interval_starts(reading_date: date, timezone: ZoneInfo) -> tuple[datetime, 
     return tuple(start + timedelta(minutes=15 * index) for index in range(96))
 
 
+def _is_portal_footer_note(row: list[str]) -> bool:
+    """Return whether a malformed-width row is Cayenta's non-data footer."""
+
+    populated = [field.strip() for field in row if field.strip()]
+    return len(populated) == 1 and populated[0].startswith("* Note:")
+
+
 def parse_smart_meter_csv(
     payload: str,
     timezone: ZoneInfo,
@@ -54,6 +61,8 @@ def parse_smart_meter_csv(
     seen_dates: set[date] = set()
     for row_number, row in enumerate(rows, start=2):
         if not row or not any(field.strip() for field in row):
+            continue
+        if _is_portal_footer_note(row):
             continue
         if len(row) < INTERVALS_PER_ORDINARY_DAY + 2:
             raise CsvValidationError(
