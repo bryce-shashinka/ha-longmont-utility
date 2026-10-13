@@ -196,3 +196,17 @@ packages.
   readings are retained in the private source archive, and 1,656 hourly
   statistics are committed for the same July 2 through September 8 local-time
   coverage.
+
+## 2026-10-12 — Tiered cost estimate (0.2.0)
+
+- Home Assistant's Energy dashboard cannot apply a price entity to an
+  external statistic, so the integration now imports a second external
+  statistic, `<suffix>_energy_cost`, in US dollars.
+- Added `tariff.py` with the dated residential RE schedule (2026 prices:
+  $17.50 customer charge; 750/1,500 kWh tiers at 10.57/12.45/16.18¢
+  non-summer and 11.64/13.73/17.83¢ summer, franchise fee included). Each
+  quarter-hour is priced against cumulative billing-cycle usage, split exactly
+  across tier boundaries; the customer charge is spread over the cycle's
+  actual hours.
+- Added an options flow for the billing-cycle start day (1-28, default 1);
+  changing it reloads the entry and recalculates the full retained archive.

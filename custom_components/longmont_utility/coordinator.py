@@ -21,8 +21,10 @@ from .client import (
 )
 from .const import (
     CONF_ACCOUNT_REF,
+    CONF_BILLING_CYCLE_START_DAY,
     CONF_METER_REF,
     CONF_STATISTIC_SUFFIX,
+    DEFAULT_BILLING_CYCLE_START_DAY,
     DOMAIN,
     INITIAL_IMPORT_DAYS,
     PORTAL_TIME_ZONE,
@@ -30,7 +32,10 @@ from .const import (
     SOURCE_STORE_VERSION,
 )
 from .source_store import SourceArchive
-from .statistics import async_import_consumption_statistics
+from .statistics import (
+    async_import_consumption_statistics,
+    async_import_cost_statistics,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,6 +97,12 @@ class LongmontDataUpdateCoordinator(DataUpdateCoordinator[CoordinatorData]):
             "_energy_consumption"
         )
 
+    @property
+    def cost_statistic_id(self) -> str:
+        """Return the non-identifying external estimated-cost statistic ID."""
+
+        return f"{DOMAIN}:{self._entry.data[CONF_STATISTIC_SUFFIX]}_energy_cost"
+
     @override
     async def _async_update_data(self) -> CoordinatorData:
         try:
@@ -108,6 +119,18 @@ class LongmontDataUpdateCoordinator(DataUpdateCoordinator[CoordinatorData]):
             readings = await self.archive.async_read()
             async_import_consumption_statistics(
                 self.hass, self.statistic_id, readings
+            )
+            async_import_cost_statistics(
+                self.hass,
+                self.cost_statistic_id,
+                readings,
+                cycle_start_day=int(
+                    self._entry.options.get(
+                        CONF_BILLING_CYCLE_START_DAY,
+                        DEFAULT_BILLING_CYCLE_START_DAY,
+                    )
+                ),
+                zone=ZoneInfo(PORTAL_TIME_ZONE),
             )
         except InvalidAuth as err:
             self._entry.async_start_reauth(self.hass)

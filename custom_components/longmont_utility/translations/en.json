@@ -20,6 +20,15 @@
       }
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cost estimate",
+        "description": "Estimated cost uses the Longmont residential (RE) tiered rate. Tiers reset each billing cycle; enter the day of the month your billing cycle starts (your meter read date).",
+        "data": {"billing_cycle_start_day": "Billing cycle start day"}
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "data_age": {"name": "Utility data age"},
