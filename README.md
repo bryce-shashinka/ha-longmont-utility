@@ -48,12 +48,37 @@ values remain in an integration-owned, private `.storage` archive for the life
 of the config entry. Raw CSV, cookies, credentials, and portal responses are not
 stored there.
 
+## Estimated cost
+
+The integration also imports a `Longmont electricity cost` statistic in US
+dollars. Select it as the grid consumption's cost ("Use an entity tracking the
+total costs") in the Energy dashboard. Each quarter-hour is priced on the
+City's residential (RE) schedule:
+
+| Billing-cycle usage | Non-summer | Summer |
+| --- | --- | --- |
+| First 750 kWh | 10.57¢ | 11.64¢ |
+| 751-1,500 kWh | 12.45¢ | 13.73¢ |
+| Over 1,500 kWh | 16.18¢ | 17.83¢ |
+
+Prices include the 8.64 percent franchise fee. The $17.50 monthly customer
+charge is spread evenly over the hours of each billing cycle. Tiers reset at
+the start of each billing cycle; set the cycle's start day (your meter read
+date, default the 1st) under the integration's **Configure** options. Summer
+applies to cycles that start June through September, an approximation of the
+City's "bills read June-September".
+
+This is an estimate, not a bill: actual cycle lengths, proration, and the
+City's read dates differ. Rates live in `tariff.py` as dated schedules and
+must be updated when the City publishes new prices (2027 rates are approved
+but not yet itemized).
+
 ## Expected behavior and limitations
 
 - Utility data commonly trails real time by a day; this is not a live power
   monitor.
-- Version 1 supports electricity consumption only. It does not import water,
-  generation, bills, rates, or costs.
+- Electricity consumption and an estimated RE-rate cost only. It does not
+  import water, generation, or actual bills.
 - Ordinary dates must contain 96 readings. DST transition dates are rejected
   rather than guessed because the export does not disambiguate them.
 - Invalid or internally inconsistent rows are not imported.

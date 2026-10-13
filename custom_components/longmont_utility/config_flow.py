@@ -8,15 +8,23 @@ from uuid import uuid4
 
 import voluptuous as vol
 from aiohttp import CookieJar
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .client import InvalidAuth, LongmontPortalClient, MeterInfo, PortalError
 from .const import (
     CONF_ACCOUNT_REF,
+    CONF_BILLING_CYCLE_START_DAY,
     CONF_METER_REF,
     CONF_STATISTIC_SUFFIX,
+    DEFAULT_BILLING_CYCLE_START_DAY,
     DOMAIN,
     PORTAL_BASE_URL,
 )
@@ -32,6 +40,13 @@ class LongmontUtilityConfigFlow(ConfigFlow, domain=DOMAIN):
     """Set up and reauthenticate a Longmont electric meter."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """Return the billing-cycle options flow."""
+
+        return LongmontOptionsFlow()
 
     def __init__(self) -> None:
         self._credentials: dict[str, str] = {}
@@ -157,4 +172,32 @@ class LongmontUtilityConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+
+OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Required(
+            CONF_BILLING_CYCLE_START_DAY,
+            default=DEFAULT_BILLING_CYCLE_START_DAY,
+        ): vol.All(vol.Coerce(int), vol.Range(min=1, max=28)),
+    }
+)
+
+
+class LongmontOptionsFlow(OptionsFlow):
+    """Configure the billing cycle used for tiered cost estimates."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Choose the local day each billing cycle starts."""
+
+        if user_input is not None:
+            return self.async_create_entry(data=OPTIONS_SCHEMA(user_input))
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                OPTIONS_SCHEMA, self.config_entry.options
+            ),
         )

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
 from homeassistant.components.recorder.models import (
     StatisticData,
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
 from .const import DOMAIN
 from .models import IntervalReading, ParsedDay
+from .tariff import hourly_costs
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,5 +112,54 @@ def async_import_consumption_statistics(
     statistics = [
         StatisticData(start=item.start, state=item.state, sum=item.sum)
         for item in build_hourly_samples_from_readings(readings)
+    ]
+    async_add_external_statistics(hass, metadata, statistics)
+
+
+def build_hourly_cost_samples(
+    readings: tuple[IntervalReading, ...],
+    *,
+    cycle_start_day: int,
+    zone: ZoneInfo,
+) -> list[HourlyStatistic]:
+    """Build cumulative hourly estimated-cost rows in US dollars."""
+
+    samples: list[HourlyStatistic] = []
+    cumulative = Decimal()
+    for start, cost in hourly_costs(
+        readings, cycle_start_day=cycle_start_day, zone=zone
+    ):
+        cumulative += cost
+        samples.append(
+            HourlyStatistic(start=start, state=float(cost), sum=float(cumulative))
+        )
+    return samples
+
+
+def async_import_cost_statistics(
+    hass: HomeAssistant,
+    statistic_id: str,
+    readings: tuple[IntervalReading, ...],
+    *,
+    cycle_start_day: int,
+    zone: ZoneInfo,
+) -> None:
+    """Upsert estimated tiered cost for the complete retained archive."""
+
+    validate_statistic_id(statistic_id)
+    metadata = StatisticMetaData(
+        mean_type=StatisticMeanType.NONE,
+        has_sum=True,
+        name="Longmont electricity cost",
+        source=DOMAIN,
+        statistic_id=statistic_id,
+        unit_class=None,
+        unit_of_measurement="USD",
+    )
+    statistics = [
+        StatisticData(start=item.start, state=item.state, sum=item.sum)
+        for item in build_hourly_cost_samples(
+            readings, cycle_start_day=cycle_start_day, zone=zone
+        )
     ]
     async_add_external_statistics(hass, metadata, statistics)
