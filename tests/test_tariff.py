@@ -10,6 +10,7 @@ from custom_components.longmont_utility.models import IntervalReading
 from custom_components.longmont_utility.statistics import build_hourly_cost_samples
 from custom_components.longmont_utility.tariff import (
     RE_SCHEDULES,
+    cycle_last_day,
     cycle_start_for,
     energy_cost,
     hourly_costs,
@@ -32,9 +33,9 @@ def quarter_hours(
 
 
 def test_tier_one_only() -> None:
-    assert energy_cost(
-        Decimal(0), Decimal(10), SCHEDULE, summer=False
-    ) == Decimal("1.0570")
+    assert energy_cost(Decimal(0), Decimal(10), SCHEDULE, summer=False) == Decimal(
+        "1.0570"
+    )
 
 
 def test_split_across_750_boundary() -> None:
@@ -54,9 +55,9 @@ def test_split_across_both_boundaries() -> None:
 
 
 def test_tier_three_only() -> None:
-    assert energy_cost(
-        Decimal(2000), Decimal(1), SCHEDULE, summer=True
-    ) == Decimal("0.1783")
+    assert energy_cost(Decimal(2000), Decimal(1), SCHEDULE, summer=True) == Decimal(
+        "0.1783"
+    )
 
 
 @pytest.mark.parametrize(
@@ -81,11 +82,24 @@ def test_next_cycle_wraps_year() -> None:
     assert next_cycle_start(date(2026, 12, 20)) == date(2027, 1, 20)
 
 
-def test_season_follows_cycle_start_month() -> None:
-    assert not is_summer(date(2026, 5, 31))
+def test_season_follows_cycle_read_date_for_calendar_cycles() -> None:
+    assert not is_summer(date(2026, 5, 1))
     assert is_summer(date(2026, 6, 1))
-    assert is_summer(date(2026, 9, 30))
+    assert is_summer(date(2026, 9, 1))
     assert not is_summer(date(2026, 10, 1))
+
+
+def test_season_follows_cycle_read_date_for_19th_cycles() -> None:
+    # Bill "08/19/26 to 09/18/26" is read in September: summer.
+    assert not is_summer(date(2026, 4, 19))  # read May 18
+    assert is_summer(date(2026, 5, 19))  # read June 18
+    assert is_summer(date(2026, 8, 19))  # read September 18
+    assert not is_summer(date(2026, 9, 19))  # read October 18
+
+
+def test_cycle_last_day() -> None:
+    assert cycle_last_day(date(2026, 8, 19)) == date(2026, 9, 18)
+    assert cycle_last_day(date(2026, 12, 1)) == date(2026, 12, 31)
 
 
 def test_customer_charge_sums_to_one_cycle_across_dst() -> None:

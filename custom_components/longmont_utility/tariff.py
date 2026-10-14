@@ -4,9 +4,10 @@ Source: https://longmontcolorado.gov/longmont-power-communications/powering-our-
 Published prices already include the 8.64 percent franchise fee and no other
 per-kWh rider applies to the standard RE schedule.
 
-The City approved a further 6.88 percent increase for 2027 but has not yet
-published the per-tier prices. Add a new dated ``RateSchedule`` to
-``RE_SCHEDULES`` once it does; earlier entries stay for historical recalculation.
+``RE_SCHEDULES`` is the built-in baseline. ``rates.py`` scrapes the City's page
+daily and appends any changed schedule it observes, so new prices (the City
+approved a further 6.88 percent increase for 2027) are picked up without a
+release. Earlier entries stay for historical recalculation.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ class Tier:
 
 @dataclass(frozen=True, slots=True)
 class RateSchedule:
-    """Rates in force for billing cycles starting on or after ``effective``."""
+    """Rates in force from local date ``effective`` onward."""
 
     effective: date
     customer_charge: Decimal
@@ -52,21 +53,34 @@ RE_SCHEDULES: tuple[RateSchedule, ...] = (
 )
 
 
-def schedule_for(cycle_start: date) -> RateSchedule:
-    """Return the newest schedule effective for a cycle (earliest as fallback)."""
+def schedule_for(
+    day: date, schedules: tuple[RateSchedule, ...] = RE_SCHEDULES
+) -> RateSchedule:
+    """Return the newest schedule effective on ``day`` (earliest as fallback)."""
 
-    ordered = sorted(RE_SCHEDULES, key=lambda item: item.effective)
+    ordered = sorted(schedules, key=lambda item: item.effective)
     chosen = ordered[0]
     for schedule in ordered:
-        if schedule.effective <= cycle_start:
+        if schedule.effective <= day:
             chosen = schedule
     return chosen
 
 
-def is_summer(cycle_start: date) -> bool:
-    """Approximate "bills read June-September" by the cycle's start month."""
+def cycle_last_day(cycle_start: date) -> date:
+    """Return the final local date of a billing cycle (its read date)."""
 
-    return cycle_start.month in SUMMER_MONTHS
+    return next_cycle_start(cycle_start) - timedelta(days=1)
+
+
+def is_summer(cycle_start: date) -> bool:
+    """Apply the City's "bills read June-September" to a cycle.
+
+    A cycle's bill is read on its last day, so a cycle is summer when that
+    day falls in June through September (for a 19th start day: the cycles
+    ending June 18 through September 18).
+    """
+
+    return cycle_last_day(cycle_start).month in SUMMER_MONTHS
 
 
 def cycle_start_for(local_day: date, start_day: int) -> date:
@@ -121,6 +135,7 @@ def hourly_costs(
     *,
     cycle_start_day: int,
     zone: ZoneInfo,
+    schedules: tuple[RateSchedule, ...] = RE_SCHEDULES,
 ) -> list[tuple[datetime, Decimal]]:
     """Return (UTC hour start, estimated cost) for every hour with readings.
 
@@ -135,11 +150,12 @@ def hourly_costs(
     charged_hours: set[datetime] = set()
     for reading in ordered:
         start = reading.start.astimezone(UTC)
-        cycle = cycle_start_for(start.astimezone(zone).date(), cycle_start_day)
+        local_day = start.astimezone(zone).date()
+        cycle = cycle_start_for(local_day, cycle_start_day)
         if cycle != current_cycle:
             current_cycle = cycle
             cycle_kwh = Decimal()
-        schedule = schedule_for(cycle)
+        schedule = schedule_for(local_day, schedules)
         cost = energy_cost(
             cycle_kwh, reading.energy_kwh, schedule, summer=is_summer(cycle)
         )
@@ -150,3 +166,55 @@ def hourly_costs(
             cost += schedule.customer_charge / _cycle_hours(cycle, zone)
         hours[hour] = hours.get(hour, Decimal()) + cost
     return sorted(hours.items())
+
+
+@dataclass(frozen=True, slots=True)
+class CurrentRate:
+    """Marginal price at the current position in the billing cycle."""
+
+    price: Decimal
+    tier: int
+    summer: bool
+    cycle_start: date
+    cycle_end: date
+    cycle_kwh: Decimal
+    schedule: RateSchedule
+
+
+def current_rate(
+    readings: tuple[IntervalReading, ...],
+    today: date,
+    *,
+    cycle_start_day: int,
+    zone: ZoneInfo,
+    schedules: tuple[RateSchedule, ...] = RE_SCHEDULES,
+) -> CurrentRate:
+    """Return the price the next kWh in today's billing cycle would cost."""
+
+    cycle = cycle_start_for(today, cycle_start_day)
+    following = next_cycle_start(cycle)
+    cycle_kwh = sum(
+        (
+            reading.energy_kwh
+            for reading in readings
+            if cycle <= reading.start.astimezone(zone).date() < following
+        ),
+        start=Decimal(),
+    )
+    schedule = schedule_for(today, schedules)
+    summer = is_summer(cycle)
+    tier_index = len(schedule.tiers) - 1
+    for index, tier in enumerate(schedule.tiers):
+        if tier.limit_kwh is None or cycle_kwh < tier.limit_kwh:
+            tier_index = index
+            break
+    tier = schedule.tiers[tier_index]
+    return CurrentRate(
+        price=tier.summer if summer else tier.non_summer,
+        tier=tier_index + 1,
+        summer=summer,
+        cycle_start=cycle,
+        cycle_end=cycle_last_day(cycle),
+        cycle_kwh=cycle_kwh,
+        schedule=schedule,
+    )

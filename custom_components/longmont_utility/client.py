@@ -8,13 +8,16 @@ from dataclasses import dataclass
 from datetime import date
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 from urllib.parse import parse_qs, quote, urlparse
 from zoneinfo import ZoneInfo
 
 from aiohttp import ClientTimeout
 
 from .const import PORTAL_TIME_ZONE
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 from .csv_parser import parse_smart_meter_csv
 from .models import ParsedDay
 
@@ -31,12 +34,22 @@ PORTAL_INTERMEDIATE_CA = Path(__file__).with_name(
 )
 
 
-def _portal_ssl_context() -> ssl.SSLContext:
-    """Return normal system trust plus the portal's omitted intermediate CA."""
+def portal_ssl_context() -> ssl.SSLContext:
+    """Return normal system trust plus the portal's omitted intermediate CA.
+
+    Loading certificates reads files; call this from an executor (see
+    ``async_portal_ssl_context``), never directly on the event loop.
+    """
 
     context = ssl.create_default_context()
     context.load_verify_locations(cafile=PORTAL_INTERMEDIATE_CA)
     return context
+
+
+async def async_portal_ssl_context(hass: HomeAssistant) -> ssl.SSLContext:
+    """Build the portal SSL context off the event loop."""
+
+    return await hass.async_add_executor_job(portal_ssl_context)
 
 
 class PortalError(Exception):
@@ -92,9 +105,7 @@ class _PortalHtmlParser(HTMLParser):
         self.refresh_hrefs: list[str] = []
         self._form: _Form | None = None
 
-    def handle_starttag(
-        self, tag: str, attrs: list[tuple[str, str | None]]
-    ) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
         if tag == "form":
             self._form = _Form(
@@ -133,12 +144,13 @@ class LongmontPortalClient:
         password: str,
         *,
         base_url: str = "",
+        ssl_context: ssl.SSLContext | None = None,
     ) -> None:
         self._session = session
         self._username = username
         self._password = password
         self._base_url = base_url.rstrip("/")
-        self._ssl_context = _portal_ssl_context()
+        self._ssl_context = ssl_context or portal_ssl_context()
         self._lock = asyncio.Lock()
         self._account_page: str | None = None
 
@@ -193,9 +205,7 @@ class LongmontPortalClient:
             data = dict(form.fields)
             data["accessCode"] = self._username
             data["password"] = self._password
-            account_html, final_url = await self._text(
-                "POST", form.action, data=data
-            )
+            account_html, final_url = await self._text("POST", form.action, data=data)
             if final_url.endswith("/app/login.jsp"):
                 raise InvalidAuth("utility portal authentication failed")
             self._account_page = account_html

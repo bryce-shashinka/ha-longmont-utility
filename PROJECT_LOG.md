@@ -210,3 +210,23 @@ packages.
   actual hours.
 - Added an options flow for the billing-cycle start day (1-28, default 1);
   changing it reloads the entry and recalculates the full retained archive.
+
+## 2026-10-13 — Rate scraper, read-date seasons, SSL off the loop (0.3.0)
+
+- Home Assistant flagged the portal SSL context (`load_verify_locations` and
+  default certificate loading) as blocking I/O on the event loop. Setup and
+  the config flow now build it in the executor and pass it to the client.
+- The operator's bill reads "Residential Energy Charges 08/19/26 to
+  09/18/26", so the billing-cycle start day on the live entry is 19. Summer is
+  now decided by the cycle's last day (read date) rather than its start
+  month, matching the City's "bills read June-September".
+- Added `rates.py`: a once-a-day scrape of the City's residential rates page
+  (now at `/rates-and-fees/residential-rates/`; the old path redirects). The
+  RE table is strictly validated and changed prices are stored as a dated
+  schedule (stated effective date, else first-seen date). Changes reprice the
+  cost statistic and raise a repair notice; seven consecutive failed days
+  raise another. Scrape errors never fail the usage refresh.
+- Added the diagnostic `Electricity rate` sensor.
+- The 2026-10-13 page states no effective date and matches the built-in 2026
+  schedule exactly ($17.50; 10.57/12.45/16.18¢ and 11.64/13.73/17.83¢ at
+  750/1,500 kWh).

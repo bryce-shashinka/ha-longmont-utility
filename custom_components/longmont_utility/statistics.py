@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 from .const import DOMAIN
 from .models import IntervalReading, ParsedDay
-from .tariff import hourly_costs
+from .tariff import RE_SCHEDULES, RateSchedule, hourly_costs
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,13 +121,14 @@ def build_hourly_cost_samples(
     *,
     cycle_start_day: int,
     zone: ZoneInfo,
+    schedules: tuple[RateSchedule, ...] = RE_SCHEDULES,
 ) -> list[HourlyStatistic]:
     """Build cumulative hourly estimated-cost rows in US dollars."""
 
     samples: list[HourlyStatistic] = []
     cumulative = Decimal()
     for start, cost in hourly_costs(
-        readings, cycle_start_day=cycle_start_day, zone=zone
+        readings, cycle_start_day=cycle_start_day, zone=zone, schedules=schedules
     ):
         cumulative += cost
         samples.append(
@@ -143,6 +144,7 @@ def async_import_cost_statistics(
     *,
     cycle_start_day: int,
     zone: ZoneInfo,
+    schedules: tuple[RateSchedule, ...] = RE_SCHEDULES,
 ) -> None:
     """Upsert estimated tiered cost for the complete retained archive."""
 
@@ -159,7 +161,7 @@ def async_import_cost_statistics(
     statistics = [
         StatisticData(start=item.start, state=item.state, sum=item.sum)
         for item in build_hourly_cost_samples(
-            readings, cycle_start_day=cycle_start_day, zone=zone
+            readings, cycle_start_day=cycle_start_day, zone=zone, schedules=schedules
         )
     ]
     async_add_external_statistics(hass, metadata, statistics)

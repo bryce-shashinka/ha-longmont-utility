@@ -18,7 +18,13 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .client import InvalidAuth, LongmontPortalClient, MeterInfo, PortalError
+from .client import (
+    InvalidAuth,
+    LongmontPortalClient,
+    MeterInfo,
+    PortalError,
+    async_portal_ssl_context,
+)
 from .const import (
     CONF_ACCOUNT_REF,
     CONF_BILLING_CYCLE_START_DAY,
@@ -59,6 +65,7 @@ class LongmontUtilityConfigFlow(ConfigFlow, domain=DOMAIN):
             username,
             password,
             base_url=PORTAL_BASE_URL,
+            ssl_context=await async_portal_ssl_context(self.hass),
         )
         await client.authenticate()
         self._meters = await client.discover_meters()
@@ -129,9 +136,7 @@ class LongmontUtilityConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required(CONF_METER_REF): vol.In(choices)}),
         )
 
-    async def async_step_reauth(
-        self, entry_data: dict[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
         """Start reauthentication for an existing entry."""
 
         return await self.async_step_reauth_confirm()
