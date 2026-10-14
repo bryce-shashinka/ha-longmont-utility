@@ -6,16 +6,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.storage import Store
 
-from .client import LongmontPortalClient
+from .client import LongmontPortalClient, async_portal_ssl_context
 from .const import DOMAIN, PORTAL_BASE_URL, SOURCE_STORE_VERSION
 from .coordinator import LongmontConfigEntry, LongmontDataUpdateCoordinator
+from .rates import RATES_STORE_VERSION
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: LongmontConfigEntry
-) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: LongmontConfigEntry) -> bool:
     """Set up a Longmont Utility config entry."""
 
     session = async_create_clientsession(hass, cookie_jar=CookieJar())
@@ -24,6 +23,7 @@ async def async_setup_entry(
         entry.data[CONF_USERNAME],
         entry.data[CONF_PASSWORD],
         base_url=PORTAL_BASE_URL,
+        ssl_context=await async_portal_ssl_context(hass),
     )
     coordinator = LongmontDataUpdateCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
@@ -41,23 +41,23 @@ async def _async_options_updated(
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(
-    hass: HomeAssistant, entry: LongmontConfigEntry
-) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: LongmontConfigEntry) -> bool:
     """Unload a Longmont Utility config entry."""
 
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_remove_entry(
-    hass: HomeAssistant, entry: LongmontConfigEntry
-) -> None:
-    """Remove the retained source archive when its config entry is deleted."""
+async def async_remove_entry(hass: HomeAssistant, entry: LongmontConfigEntry) -> None:
+    """Remove the retained archives when their config entry is deleted."""
 
-    store = Store[dict[str, object]](
-        hass,
-        SOURCE_STORE_VERSION,
-        f"{DOMAIN}.{entry.entry_id}.source",
-        private=True,
-    )
-    await store.async_remove()
+    for version, kind in (
+        (SOURCE_STORE_VERSION, "source"),
+        (RATES_STORE_VERSION, "rates"),
+    ):
+        store = Store[dict[str, object]](
+            hass,
+            version,
+            f"{DOMAIN}.{entry.entry_id}.{kind}",
+            private=True,
+        )
+        await store.async_remove()

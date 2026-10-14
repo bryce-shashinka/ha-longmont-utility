@@ -53,7 +53,7 @@ stored there.
 The integration also imports a `Longmont electricity cost` statistic in US
 dollars. Select it as the grid consumption's cost ("Use an entity tracking the
 total costs") in the Energy dashboard. Each quarter-hour is priced on the
-City's residential (RE) schedule:
+City's residential (RE) schedule (2026 prices shown):
 
 | Billing-cycle usage | Non-summer | Summer |
 | --- | --- | --- |
@@ -63,15 +63,33 @@ City's residential (RE) schedule:
 
 Prices include the 8.64 percent franchise fee. The $17.50 monthly customer
 charge is spread evenly over the hours of each billing cycle. Tiers reset at
-the start of each billing cycle; set the cycle's start day (your meter read
-date, default the 1st) under the integration's **Configure** options. Summer
-applies to cycles that start June through September, an approximation of the
-City's "bills read June-September".
+the start of each billing cycle; set the cycle's start day under the
+integration's **Configure** options. Use the first date of the period printed
+on your bill: "Residential Energy Charges 08/19/26 to 09/18/26" means 19.
+
+Summer pricing follows the City's "bills read June-September": a cycle is
+summer when its last day (the read date) falls in June through September. With
+a 19th start day, the cycles ending June 18 through September 18 are summer.
+
+### Rate updates
+
+Once a day the integration reads the City's
+[residential rates page](https://longmontcolorado.gov/longmont-power-communications/rates-and-fees/residential-rates/),
+strictly validates the RE table (three tiers, increasing boundaries and
+prices, summer at or above non-summer, plausible ranges), and keeps the result
+in a private `.storage` file. When the published prices change, the new
+schedule takes effect from a date stated on the page or, when the page states
+none, from the day it was first seen. The cost statistic is recalculated and a
+repair notice says so. If the page cannot be read or validated for seven
+consecutive days, a repair notice says costs are using the last known rates.
+Built-in 2026 prices in `tariff.py` remain the fallback.
+
+The diagnostic **Electricity rate** sensor shows the price of the next kWh at
+the current billing-cycle position, with the tier, season, cycle dates,
+cycle-to-date usage, full tier table, and when the rates were last checked.
 
 This is an estimate, not a bill: actual cycle lengths, proration, and the
-City's read dates differ. Rates live in `tariff.py` as dated schedules and
-must be updated when the City publishes new prices (2027 rates are approved
-but not yet itemized).
+City's read dates differ.
 
 ## Expected behavior and limitations
 

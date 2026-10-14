@@ -214,9 +214,7 @@ def test_rejects_ranges_over_ninety_days() -> None:
     meter = MeterInfo("acct-test-1", "meter-test-1", "Longmont electric meter")
 
     with pytest.raises(PortalProtocolError, match="90 days"):
-        asyncio.run(
-            client.download_usage(meter, date(2026, 1, 1), date(2026, 4, 1))
-        )
+        asyncio.run(client.download_usage(meter, date(2026, 1, 1), date(2026, 4, 1)))
 
 
 def test_protocol_errors_are_redacted() -> None:
@@ -338,3 +336,23 @@ def test_interval_timezone_is_longmont_local_time() -> None:
     )
 
     assert parsed[0].intervals[0].start.tzinfo == ZoneInfo("America/Denver")
+
+
+def test_supplied_ssl_context_is_used_without_rebuilding(monkeypatch) -> None:
+    import custom_components.longmont_utility.client as client_module
+
+    def fail() -> ssl.SSLContext:
+        raise AssertionError("context must not be rebuilt on the event loop")
+
+    monkeypatch.setattr(client_module, "portal_ssl_context", fail)
+    context = ssl.create_default_context()
+    session = FakeSession(
+        [FakeResponse(text=LOGIN_HTML), FakeResponse(text=ACCOUNT_HTML)]
+    )
+    client = LongmontPortalClient(
+        session, "person@example.invalid", "not-a-secret", ssl_context=context
+    )
+
+    asyncio.run(client.authenticate())
+
+    assert session.requests[0][2]["ssl"] is context

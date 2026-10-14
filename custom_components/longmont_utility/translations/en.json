@@ -1,21 +1,31 @@
 {
   "config": {
-    "abort": {"already_configured": "This meter is already configured."},
+    "abort": {
+      "already_configured": "This meter is already configured."
+    },
     "error": {
       "cannot_connect": "Unable to connect to the utility portal.",
       "invalid_auth": "Invalid email or password."
     },
     "step": {
       "user": {
-        "data": {"password": "Password", "username": "Email"},
+        "data": {
+          "password": "Password",
+          "username": "Email"
+        },
         "title": "Connect to Longmont Utility"
       },
       "meter": {
-        "data": {"meter_ref": "Electric meter"},
+        "data": {
+          "meter_ref": "Electric meter"
+        },
         "title": "Select a meter"
       },
       "reauth_confirm": {
-        "data": {"password": "Password", "username": "Email"},
+        "data": {
+          "password": "Password",
+          "username": "Email"
+        },
         "title": "Reconnect to Longmont Utility"
       }
     }
@@ -25,15 +35,36 @@
       "init": {
         "title": "Cost estimate",
         "description": "Estimated cost uses the Longmont residential (RE) tiered rate. Tiers reset each billing cycle; enter the day of the month your billing cycle starts (your meter read date).",
-        "data": {"billing_cycle_start_day": "Billing cycle start day"}
+        "data": {
+          "billing_cycle_start_day": "Billing cycle start day"
+        }
       }
     }
   },
   "entity": {
     "sensor": {
-      "data_age": {"name": "Utility data age"},
-      "last_success": {"name": "Last successful update"},
-      "latest_interval": {"name": "Latest utility interval"}
+      "data_age": {
+        "name": "Utility data age"
+      },
+      "last_success": {
+        "name": "Last successful update"
+      },
+      "latest_interval": {
+        "name": "Latest utility interval"
+      },
+      "electricity_rate": {
+        "name": "Electricity rate"
+      }
+    }
+  },
+  "issues": {
+    "rates_changed": {
+      "title": "Longmont electricity rates changed",
+      "description": "The City of Longmont's published residential (RE) rates changed. Estimated costs from {effective} onward now use the new prices. Review them at {url}."
+    },
+    "rates_unreadable": {
+      "title": "Longmont rate page could not be read",
+      "description": "The residential rate page at {url} could not be read or validated for {days} consecutive days. Estimated costs keep using the last known rates until it can be read again."
     }
   }
 }
