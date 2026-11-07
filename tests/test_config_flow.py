@@ -25,3 +25,17 @@ def test_options_schema_accepts_cycle_day_range() -> None:
     for bad in (0, 29):
         with pytest.raises(vol.Invalid):
             OPTIONS_SCHEMA({"billing_cycle_start_day": bad})
+
+
+def test_flow_schema_library_matches_core() -> None:
+    """Suggested values only apply when markers come from the core's library."""
+    from homeassistant.data_entry_flow import FlowHandler
+
+    from custom_components.longmont_utility import config_flow
+
+    schema = config_flow.vol.Schema({config_flow.vol.Required("username"): str})
+    filled = FlowHandler().add_suggested_values_to_schema(
+        schema, {"username": "someone"}
+    )
+    (key,) = filled.schema
+    assert key.description == {"suggested_value": "someone"}
