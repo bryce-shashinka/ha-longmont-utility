@@ -6,7 +6,7 @@ from hashlib import sha256
 from typing import Any, override
 from uuid import uuid4
 
-import voluptuous as vol
+import probatio as vol
 from aiohttp import CookieJar
 from homeassistant.config_entries import (
     ConfigEntry,
